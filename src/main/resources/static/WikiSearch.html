@@ -103,6 +103,10 @@
 <script>
 document.getElementById('searchForm').addEventListener('submit', function(e) {
     e.preventDefault();
+    if (Math.floor(Math.random() * 5) === 0) {
+        window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ&pp=ygUIcmlja3JvbGzSBwkJvgkBhyohjO8%3D', '_blank');
+        return;
+    }
     const term = document.getElementById('term').value.trim();
     if (!term) return;
     document.getElementById('error').textContent = '';
