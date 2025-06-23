@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Список запросов</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a237e 0%, #4a148c 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: block;
+        }
+        #bg1, #bg2 {
+            position: fixed;
+            left: 0; top: 0; width: 100vw; height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+            transition: opacity 5s cubic-bezier(0.4,0,0.2,1);
+        }
+        #bg2 { opacity: 0; }
+        .container { max-width: 800px; margin: 40px auto; background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h1 { text-align: center; }
+        button {
+            padding: 8px 16px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: background 0.3s, color 0.3s, box-shadow 0.3s;
+        }
+        button:hover {
+            filter: brightness(1.15);
+            box-shadow: 0 2px 12px rgba(60,60,120,0.15);
+        }
+        #addBtn {
+            background:#388e3c;color:#fff;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;font-size:16px;
+        }
+        #addBtn:hover {
+            background: #2e7031;
+        }
+        #refreshBtn {
+            background: #1976d2; color: #fff; border: none; border-radius: 4px;
+        }
+        #refreshBtn:hover {
+            background: #125ea6;
+        }
+        .container button[onclick*='loadArticles']:not(#refreshBtn) {
+            background: #1976d2; color: #fff; border: none; border-radius: 4px;
+        }
+        .container button[onclick*='loadArticles']:not(#refreshBtn):hover {
+            background: #125ea6;
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 4px 8px; text-align: left; font-size: 15px; }
+        th:last-child, td:last-child { text-align: center; width: 1%; white-space: nowrap; vertical-align: middle; }
+        td:last-child { height: 100%; padding-top: 0; padding-bottom: 0; }
+        td:last-child > button {
+            background:#d32f2f;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;height:30px;margin:3px 3px 3px 3px;
+        }
+        td:last-child > button:hover {
+            background: #a31515;
+        }
+        th { background: #f0f0f0; }
+        .history-list { margin: 0; padding-left: 20px; }
+    </style>
+</head>
+<body>
+<div id="bg1"></div>
+<div id="bg2"></div>
+<a href="WikiSearch.html" style="position: absolute; top: 20px; left: 30px; text-decoration: none; background: #1976d2; color: #fff; padding: 8px 16px; border-radius: 4px; font-size: 15px;">← Назад к поиску</a>
+<div class="container">
+    <h1>Wiki Articles</h1>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 20px;">
+        <div style="display: flex; gap: 8px;">
+            <button onclick="loadArticles()">Загрузить статьи</button>
+            <button id="addBtn" style="background:#388e3c;color:#fff;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;font-size:16px;">Добавить статью</button>
+        </div>
+        <button onclick="loadArticles()" id="refreshBtn">Обновить</button>
+    </div>
+    <table id="articlesTable" style="display:none;">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Wiki Link</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody id="articlesBody"></tbody>
+    </table>
+    <div id="error" style="color:red;"></div>
+</div>
+<script>
+function loadArticles() {
+    fetch('/api/articles') 
+        .then(response => {
+            if (!response.ok) throw new Error('Ошибка загрузки данных');
+            return response.json();
+        })
+        .then(data => {
+            const table = document.getElementById('articlesTable');
+            const tbody = document.getElementById('articlesBody');
+            tbody.innerHTML = '';
+            data.forEach(article => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${article.id}</td>
+                    <td>${article.title}</td>
+                    <td>
+                        <a href="https://ru.wikipedia.org/wiki/${encodeURIComponent(article.title)}" target="_blank" style="background:#1976d2;color:#fff;padding:6px 14px;border-radius:4px;text-decoration:none;font-size:14px;">Ссылка на Wikipedia</a>
+                    </td>
+                    <td style="text-align:center;">
+                        <button onclick="deleteArticle(${article.id})" style="background:#d32f2f;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:14px;">Удалить</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            table.style.display = data.length ? '' : 'none';
+            document.getElementById('error').textContent = data.length ? '' : 'Нет данных';
+        })
+        .catch(err => {
+            document.getElementById('error').textContent = err.message;
+        });
+}
+
+function deleteArticle(id) {
+    if (!confirm('Удалить статью?')) return;
+    fetch(`/api/articles/${id}`, { method: 'DELETE' })
+        .then(response => {
+            if (!response.ok) throw new Error('Ошибка удаления');
+            loadArticles();
+        })
+        .catch(err => {
+            alert('Ошибка: ' + err.message);
+        });
+}
+
+// Добавление статьи
+function addArticle() {
+    const title = prompt('Введите название новой статьи:');
+    if (!title) return;
+    fetch('/api/articles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Ошибка добавления');
+        loadArticles();
+    })
+    .catch(err => {
+        alert('Ошибка: ' + err.message);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('addBtn').onclick = addArticle;
+});
+
+const gradients = [
+    ['#1a237e', '#4a148c'],
+    ['#1976d2', '#7b2ff2'],
+    ['#283593', '#8e24aa'],
+    ['#1565c0', '#6a1b9a'],
+    ['#3949ab', '#512da8'],
+    ['#0f2027', '#2c5364'],
+    ['#232526', '#414345'],
+    ['#00c6ff', '#0072ff'],
+    ['#ff512f', '#dd2476'],
+    ['#1d4350', '#a43931'],
+    ['#43cea2', '#185a9d'],
+    ['#f7971e', '#ffd200'],
+    ['#e96443', '#904e95'],
+    ['#ff5f6d', '#ffc371'],
+    ['#36d1c4', '#1e3799']
+];
+let gradIdx = 0;
+const bg1 = document.getElementById('bg1');
+const bg2 = document.getElementById('bg2');
+function setGradient(div, idx) {
+    div.style.background = `linear-gradient(135deg, ${gradients[idx][0]} 0%, ${gradients[idx][1]} 100%)`;
+}
+setGradient(bg1, gradIdx);
+setGradient(bg2, (gradIdx + 1) % gradients.length);
+let fade = false;
+setInterval(() => {
+    fade = !fade;
+    if (fade) {
+        gradIdx = (gradIdx + 1) % gradients.length;
+        setGradient(bg2, gradIdx);
+        bg2.style.opacity = 1;
+        bg1.style.opacity = 0;
+    } else {
+        gradIdx = (gradIdx + 1) % gradients.length;
+        setGradient(bg1, gradIdx);
+        bg2.style.opacity = 0;
+        bg1.style.opacity = 1;
+    }
+}, 1800);
+</script>
+</body>
+</html>
