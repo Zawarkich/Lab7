@@ -41,6 +41,11 @@ public class WikiController {
         return requestCounterService.getCount();
     }
 
+    @PostMapping("/search/java-count/reset")
+    public void resetJavaSearchCount() {
+        requestCounterService.reset();
+    }
+
     public static class BulkSearchRequest {
         private String title;
         private String content;
